@@ -1,0 +1,15 @@
+[package]
+name = "stream_utils"
+version = "0.1.0"
+authors = ["Thomas BAGREL <tomsb07@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix-web = "2.0"
+serde = "1.0"
+serde_json = "1.0"
+futures = "0.3"
+pin-project = "0.4"
+sqlx = { version = "0.4.0-beta.1", features = ["postgres"] }
