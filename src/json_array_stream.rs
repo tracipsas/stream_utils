@@ -13,6 +13,7 @@ use std::{
     },
 };
 use actix_web::{
+    web::Bytes,
     ResponseError,
     http::StatusCode,
     HttpResponse,
@@ -92,7 +93,7 @@ where
     E: 'static + Sized + ResponseError,
     S: 'static + Sized + Stream<Item = Result<T, E>>,
 {
-    type Item = Result<String, SerializedStreamError<E>>;
+    type Item = Result<Bytes, SerializedStreamError<E>>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let JsonArrayStreamProject {
@@ -103,7 +104,7 @@ where
         } = self.project();
         if !*opening_emitted {
             *opening_emitted = true;
-            Poll::Ready(Some(Ok("[\n    ".to_string())))
+            Poll::Ready(Some(Ok("[\n    ".to_string().into())))
         } else if *closing_emitted {
             Poll::Ready(None)
         } else {
@@ -115,18 +116,18 @@ where
                             .map_err(|serialization_error| SerializedStreamError::SerializationError(serialization_error)),
                         Err(source_error) => Err(SerializedStreamError::SourceError(source_error)),
                     };
-                    new_res.iter_mut().for_each(|value_str| {
+                    if let Ok(ref mut value_str) = new_res {
                         if *is_first {
                             *is_first = false;
                         } else {
                             value_str.insert_str(0, ",\n    ");
                         }
-                    });
-                    Poll::Ready(Some(new_res))
+                    }
+                    Poll::Ready(Some(new_res.map(Bytes::from)))
                 },
                 Poll::Ready(None) => {
                     *closing_emitted = true;
-                    Poll::Ready(Some(Ok("\n]".to_string())))
+                    Poll::Ready(Some(Ok("\n]".to_string().into())))
                 },
             }
         }

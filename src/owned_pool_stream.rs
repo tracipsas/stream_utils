@@ -1,4 +1,7 @@
-use futures::Stream;
+use futures::{
+    Stream,
+    TryStreamExt,
+};
 use pin_project::pin_project;
 use sqlx::{
     postgres::PgPool,
@@ -13,26 +16,30 @@ use std::{
         Poll,
     },
 };
+use actix_web::ResponseError;
 
 #[pin_project(project = OwnedPoolStreamProject)]
-pub struct OwnedPoolStream<T> {
+pub struct OwnedPoolStream<T, E> {
     #[pin]
     pool: PgPool,
     #[pin]
-    stream: Option<Box<dyn 'static + Unpin + Stream<Item = Result<T, sqlx::Error>>>>,
+    stream: Option<Box<dyn 'static + Unpin + Stream<Item = Result<T, E>>>>,
 }
 
-impl<T> OwnedPoolStream<T>
+impl<T, E> OwnedPoolStream<T, E>
 where
     T: 'static + Send + Unpin,
+    E: ResponseError,
 {
-    pub fn from<F, A>(
+    pub fn from<K, A, F>(
         pool: PgPool,
-        query: sqlx::query::Map<'static, Postgres, F, A>,
+        query: sqlx::query::Map<'static, Postgres, K, A>,
+        error_transform: F,
     ) -> Pin<Box<Self>>
     where
         A: 'static + Send + IntoArguments<'static, Postgres>,
-        F: 'static + Send + Sync + Fn(<Postgres as sqlx::Database>::Row) -> Result<T, sqlx::Error>,
+        K: 'static + Send + Sync + Fn(<Postgres as sqlx::Database>::Row) -> Result<T, sqlx::Error>,
+        F: 'static + Fn(sqlx::Error) -> E,
     {
         let res = OwnedPoolStream { pool, stream: None };
         let mut boxed = Box::pin(res);
@@ -41,17 +48,17 @@ where
         unsafe {
             let mut_ref: Pin<&mut Self> = Pin::as_mut(&mut boxed);
             Pin::get_unchecked_mut(mut_ref).stream =
-                Some(Box::new(query.fetch(&*pool_ref.as_ptr())));
+                Some(Box::new(query.fetch(&*pool_ref.as_ptr()).map_err(error_transform)));
         }
         boxed
     }
 }
 
-impl<T> Stream for OwnedPoolStream<T>
+impl<T, E> Stream for OwnedPoolStream<T, E>
 where
     T: 'static,
 {
-    type Item = Result<T, sqlx::Error>;
+    type Item = Result<T, E>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = self.project();
