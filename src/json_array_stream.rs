@@ -1,10 +1,16 @@
+use actix_web::{
+    http::StatusCode,
+    web::Bytes,
+    HttpResponse,
+    ResponseError,
+};
 use futures::Stream;
 use pin_project::pin_project;
 use serde::Serialize;
 use std::{
     fmt::{
-        Display,
         Debug,
+        Display,
     },
     pin::Pin,
     task::{
@@ -12,12 +18,8 @@ use std::{
         Poll,
     },
 };
-use actix_web::{
-    web::Bytes,
-    ResponseError,
-    http::StatusCode,
-    HttpResponse,
-};
+
+use crate::serialized_stream_error::SerializedStreamError;
 
 #[pin_project(project = JsonArrayStreamProject)]
 pub struct JsonArrayStream<S> {
@@ -38,51 +40,6 @@ where
             closing_emitted: false,
             is_first: true,
             stream,
-        }
-    }
-}
-
-pub enum SerializedStreamError<E> {
-    SourceError(E),
-    SerializationError(serde_json::error::Error),
-}
-impl<E> Debug for SerializedStreamError<E>
-    where E: 'static + Sized + ResponseError
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SerializedStreamError::SourceError(e) => Debug::fmt(e, f),
-            SerializedStreamError::SerializationError(e) => Debug::fmt(e, f),
-        }
-    }
-}
-impl<E> Display for SerializedStreamError<E>
-    where E: 'static + Sized + ResponseError
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SerializedStreamError::SourceError(e) => Display::fmt(e, f),
-            SerializedStreamError::SerializationError(e) => Display::fmt(e, f),
-        }
-    }
-}
-impl<E> std::error::Error for SerializedStreamError<E>
-    where E: 'static + Sized + ResponseError {}
-
-impl<E> ResponseError for SerializedStreamError<E>
-    where E: 'static + Sized + ResponseError
-{
-    fn status_code(&self) -> StatusCode {
-        match self {
-            SerializedStreamError::SourceError(e) => e.status_code(),
-            SerializedStreamError::SerializationError(e) => e.status_code(),
-        }
-    }
-
-    fn error_response(&self) -> HttpResponse {
-        match self {
-            SerializedStreamError::SourceError(e) => e.error_response(),
-            SerializedStreamError::SerializationError(e) => e.error_response(),
         }
     }
 }
@@ -112,8 +69,9 @@ where
                 Poll::Pending => Poll::Pending,
                 Poll::Ready(Some(res)) => {
                     let mut new_res = match res {
-                        Ok(value) => serde_json::to_string(&value)
-                            .map_err(|serialization_error| SerializedStreamError::SerializationError(serialization_error)),
+                        Ok(value) => serde_json::to_string(&value).map_err(|serialization_error| {
+                            SerializedStreamError::SerializationError(serialization_error)
+                        }),
                         Err(source_error) => Err(SerializedStreamError::SourceError(source_error)),
                     };
                     if let Ok(ref mut value_str) = new_res {
