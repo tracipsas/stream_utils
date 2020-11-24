@@ -1,17 +1,11 @@
 use actix_web::{
-    http::StatusCode,
     web::Bytes,
-    HttpResponse,
     ResponseError,
 };
 use futures::Stream;
 use pin_project::pin_project;
 use serde::Serialize;
 use std::{
-    fmt::{
-        Debug,
-        Display,
-    },
     pin::Pin,
     task::{
         Context,

@@ -14,10 +14,8 @@ use sqlx::{
     Postgres,
 };
 use std::{
-    marker::PhantomData,
     mem,
     pin::Pin,
-    ptr::NonNull,
     task::{
         Context,
         Poll,
@@ -29,7 +27,7 @@ use crate::serialized_stream_error::SerializedStreamError;
 use State::*;
 
 #[pin_project(project = JsonMapStreamProject)]
-pub struct JsonMapStream<O, E, I, F, G, A, B, K, T, W, WE> {
+pub struct JsonMapStream<O, I, F, G, K, WE> {
     #[pin]
     pool: PgPool,
     state: State<K>,
@@ -37,13 +35,12 @@ pub struct JsonMapStream<O, E, I, F, G, A, B, K, T, W, WE> {
     remaining_queries: I,
     error_transform: F,
     post_transform: G,
-    phantom: PhantomData<(E, A, B, T, W, WE)>,
 }
 
 pub type JsonMapInnerStream<'a, T, F> =
     futures::stream::MapErr<Pin<Box<dyn Send + Stream<Item = Result<T, sqlx::Error>>>>, &'a mut F>;
 
-impl<O, E, I, F, G, A, B, K, T, W, WE> JsonMapStream<O, E, I, F, G, A, B, K, T, W, WE>
+impl<O, E, I, F, G, A, B, K, T, W, WE> JsonMapStream<O, I, F, G, K, WE>
 where
     O: 'static + Send + Unpin + Serialize,
     E: 'static + ResponseError,
@@ -65,7 +62,6 @@ where
             remaining_queries: queries,
             error_transform,
             post_transform,
-            phantom: PhantomData,
         };
         // I need to pin the struct here, to then get a pointer to pool which will
         // always be valid (because the struct can no longer be moved using the
@@ -81,13 +77,12 @@ where
         // TODO: load_next_query_and_update_state should be executed if current stream
         let pool_raw_ptr = &self.pool as *const PgPool;
         let JsonMapStreamProject {
-            phantom: _,
-            pool: _,
             state,
             pinned_stream_opt,
             remaining_queries,
             error_transform,
             post_transform,
+            ..
         } = self.project();
 
         match remaining_queries.next() {
@@ -120,13 +115,9 @@ where
         Poll<Option<Result<Bytes, SerializedStreamError<WE>>>>,
     ) {
         let JsonMapStreamProject {
-            phantom: _,
-            pool: _,
             state,
             pinned_stream_opt,
-            remaining_queries: _,
-            error_transform: _,
-            post_transform: _,
+            ..
         } = self.project();
         match pinned_stream_opt.as_mut() {
             None => {
@@ -216,7 +207,7 @@ fn indent(serialized_value: String, is_first: bool) -> String {
     text
 }
 
-impl<O, E, I, F, G, A, B, K, T, W, WE> Stream for JsonMapStream<O, E, I, F, G, A, B, K, T, W, WE>
+impl<O, E, I, F, G, A, B, K, T, W, WE> Stream for JsonMapStream<O, I, F, G, K, WE>
 where
     O: 'static + Send + Unpin + Serialize,
     E: 'static + ResponseError,

@@ -1,11 +1,11 @@
-use std::fmt::{
-    Display,
-    Debug,
-};
 use actix_web::{
-    ResponseError,
     http::StatusCode,
     HttpResponse,
+    ResponseError,
+};
+use std::fmt::{
+    Debug,
+    Display,
 };
 
 pub enum SerializedStreamError<E> {
@@ -13,7 +13,8 @@ pub enum SerializedStreamError<E> {
     SerializationError(serde_json::error::Error),
 }
 impl<E> Debug for SerializedStreamError<E>
-    where E: 'static + Sized + ResponseError
+where
+    E: 'static + Sized + ResponseError,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -23,7 +24,8 @@ impl<E> Debug for SerializedStreamError<E>
     }
 }
 impl<E> Display for SerializedStreamError<E>
-    where E: 'static + Sized + ResponseError
+where
+    E: 'static + Sized + ResponseError,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -32,11 +34,11 @@ impl<E> Display for SerializedStreamError<E>
         }
     }
 }
-impl<E> std::error::Error for SerializedStreamError<E>
-    where E: 'static + Sized + ResponseError {}
+impl<E> std::error::Error for SerializedStreamError<E> where E: 'static + Sized + ResponseError {}
 
 impl<E> ResponseError for SerializedStreamError<E>
-    where E: 'static + Sized + ResponseError
+where
+    E: 'static + Sized + ResponseError,
 {
     fn status_code(&self) -> StatusCode {
         match self {
