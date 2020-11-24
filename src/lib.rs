@@ -4,13 +4,6 @@
 pub mod json_array_stream;
 pub use json_array_stream::JsonArrayStream;
 
-pub mod json_map_stream;
-pub use json_map_stream::{
-    identity,
-    JsonMapInnerStream,
-    JsonMapStream,
-};
-
 pub mod owned_pool_stream;
 pub use owned_pool_stream::OwnedPoolStream;
 
