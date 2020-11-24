@@ -13,7 +13,7 @@ use std::{
 };
 
 #[pin_project(project = PseudoStreamProject)]
-pub struct PseudoStream<F: Sized> {
+pub struct PseudoStream<F> {
     emitted: bool,
     #[pin]
     future: F,
