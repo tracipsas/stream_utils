@@ -37,6 +37,10 @@ pub struct JsonMapStream<O, I, F, G, K, WE> {
     post_transform: G,
 }
 
+pub fn identity<T>(t: T) -> T {
+    t
+}
+
 pub type JsonMapInnerStream<'a, T, F> =
     futures::stream::MapErr<Pin<Box<dyn Send + Stream<Item = Result<T, sqlx::Error>>>>, &'a mut F>;
 
@@ -74,7 +78,6 @@ where
     }
 
     fn load_next_query_and_update_state(self: Pin<&mut Self>) -> () {
-        // TODO: load_next_query_and_update_state should be executed if current stream
         let pool_raw_ptr = &self.pool as *const PgPool;
         let JsonMapStreamProject {
             state,
