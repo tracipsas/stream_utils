@@ -10,7 +10,8 @@ use std::fmt::{
 
 pub enum SerializedStreamError<E> {
     SourceError(E),
-    SerializationError(serde_json::error::Error),
+    SerdeError(serde_json::error::Error),
+    HexError(hex::FromHexError),
 }
 impl<E> Debug for SerializedStreamError<E>
 where
@@ -19,7 +20,8 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             SerializedStreamError::SourceError(e) => Debug::fmt(e, f),
-            SerializedStreamError::SerializationError(e) => Debug::fmt(e, f),
+            SerializedStreamError::SerdeError(e) => Debug::fmt(e, f),
+            SerializedStreamError::HexError(e) => Debug::fmt(e, f),
         }
     }
 }
@@ -30,7 +32,8 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             SerializedStreamError::SourceError(e) => Display::fmt(e, f),
-            SerializedStreamError::SerializationError(e) => Display::fmt(e, f),
+            SerializedStreamError::SerdeError(e) => Display::fmt(e, f),
+            SerializedStreamError::HexError(e) => Display::fmt(e, f),
         }
     }
 }
@@ -43,14 +46,16 @@ where
     fn status_code(&self) -> StatusCode {
         match self {
             SerializedStreamError::SourceError(e) => e.status_code(),
-            SerializedStreamError::SerializationError(e) => e.status_code(),
+            SerializedStreamError::SerdeError(e) => e.status_code(),
+            SerializedStreamError::HexError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 
     fn error_response(&self) -> HttpResponse {
         match self {
             SerializedStreamError::SourceError(e) => e.error_response(),
-            SerializedStreamError::SerializationError(e) => e.error_response(),
+            SerializedStreamError::SerdeError(e) => e.error_response(),
+            SerializedStreamError::HexError(_) => HttpResponse::new(self.status_code()),
         }
     }
 }

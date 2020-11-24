@@ -64,7 +64,7 @@ where
                 Poll::Ready(Some(res)) => {
                     let mut new_res = match res {
                         Ok(value) => serde_json::to_string(&value).map_err(|serialization_error| {
-                            SerializedStreamError::SerializationError(serialization_error)
+                            SerializedStreamError::SerdeError(serialization_error)
                         }),
                         Err(source_error) => Err(SerializedStreamError::SourceError(source_error)),
                     };

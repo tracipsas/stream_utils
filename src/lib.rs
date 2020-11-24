@@ -10,4 +10,10 @@ pub use owned_pool_stream::OwnedPoolStream;
 pub mod pseudo_stream;
 pub use pseudo_stream::PseudoStream;
 
+pub mod hex_stream;
+pub use hex_stream::{
+    HexStream,
+    LineEnding,
+};
+
 mod serialized_stream_error;

@@ -13,3 +13,6 @@ serde_json = "1.0"
 futures = "0.3"
 pin-project = "1.0"
 sqlx = { version = "0.4", features = ["postgres", "runtime-actix-native-tls"] }
+hex = "0.4"
+
+serde_utils = { branch = "master", git = "https://github.com/tracipsas/serde_utils" }
