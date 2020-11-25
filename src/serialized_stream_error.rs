@@ -39,6 +39,12 @@ where
 }
 impl<E> std::error::Error for SerializedStreamError<E> where E: 'static + Sized + ResponseError {}
 
+fn json_internal_server_error_response() -> HttpResponse {
+    HttpResponse::InternalServerError()
+        .set_header(actix_web::http::header::CONTENT_TYPE, "application/json")
+        .body("{\"error\": \"Internal Server Error\"}")
+}
+
 impl<E> ResponseError for SerializedStreamError<E>
 where
     E: 'static + Sized + ResponseError,
@@ -46,7 +52,7 @@ where
     fn status_code(&self) -> StatusCode {
         match self {
             SerializedStreamError::SourceError(e) => e.status_code(),
-            SerializedStreamError::SerdeError(e) => e.status_code(),
+            SerializedStreamError::SerdeError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             SerializedStreamError::HexError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -54,7 +60,7 @@ where
     fn error_response(&self) -> HttpResponse {
         match self {
             SerializedStreamError::SourceError(e) => e.error_response(),
-            SerializedStreamError::SerdeError(e) => e.error_response(),
+            SerializedStreamError::SerdeError(_) => json_internal_server_error_response(),
             SerializedStreamError::HexError(_) => HttpResponse::new(self.status_code()),
         }
     }
