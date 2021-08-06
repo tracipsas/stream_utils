@@ -77,7 +77,7 @@ where
                 if *is_first {
                     *is_first = false;
                 } else {
-                    hex_bytes.push_str(line_ending.value());
+                    hex_bytes.insert_str(0, line_ending.value());
                 }
                 Poll::Ready(Some(Ok(Bytes::from(hex_bytes))))
             },
