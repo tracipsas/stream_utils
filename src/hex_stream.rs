@@ -39,7 +39,6 @@ impl LineEnding {
 pub struct HexStream<S> {
     is_first: bool,
     line_ending: LineEnding,
-    buffer: String,
     #[pin]
     stream: S,
 }
@@ -52,7 +51,6 @@ where
     pub fn from(stream: S, line_ending: LineEnding) -> Self {
         HexStream {
             is_first: true,
-            buffer: String::with_capacity(64 + 2),
             line_ending,
             stream,
         }
@@ -69,34 +67,21 @@ where
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let HexStreamProject {
             is_first,
-            buffer,
             line_ending,
             stream,
         } = self.project();
         match stream.poll_next(cx) {
             Poll::Pending => Poll::Pending,
             Poll::Ready(Some(Ok(bytes))) => {
-                buffer.clear();
+                let mut hex_bytes = hex::encode(&bytes);
                 if *is_first {
                     *is_first = false;
                 } else {
-                    buffer.push_str(line_ending.value());
+                    hex_bytes.push_str(line_ending.value());
                 }
-                unsafe {
-                    match hex::encode_to_slice(bytes, buffer.as_bytes_mut()) {
-                        Ok(_) => {
-                            println!("ok hex: {}", buffer);
-                            Poll::Ready(Some(Ok(Bytes::from(buffer.clone()))))
-                        },
-                        Err(e) => {
-                            eprintln!("hex: {}", e);
-                            Poll::Ready(Some(Err(SerializedStreamError::HexError(e))))
-                        },
-                    }
-                }
+                Poll::Ready(Some(Ok(Bytes::from(hex_bytes))))
             },
             Poll::Ready(Some(Err(e))) => {
-                eprintln!("upper stream: {}", e);
                 Poll::Ready(Some(Err(SerializedStreamError::SourceError(e))))
             },
             Poll::Ready(None) => Poll::Ready(None),
