@@ -84,12 +84,19 @@ where
                 }
                 unsafe {
                     match hex::encode_to_slice(bytes, buffer.as_bytes_mut()) {
-                        Ok(_) => Poll::Ready(Some(Ok(Bytes::from(buffer.clone())))),
-                        Err(e) => Poll::Ready(Some(Err(SerializedStreamError::HexError(e)))),
+                        Ok(_) => {
+                            println!("ok hex: {}", buffer);
+                            Poll::Ready(Some(Ok(Bytes::from(buffer.clone()))))
+                        },
+                        Err(e) => {
+                            eprintln!("hex: {}", e);
+                            Poll::Ready(Some(Err(SerializedStreamError::HexError(e))))
+                        },
                     }
                 }
             },
             Poll::Ready(Some(Err(e))) => {
+                eprintln!("upper stream: {}", e);
                 Poll::Ready(Some(Err(SerializedStreamError::SourceError(e))))
             },
             Poll::Ready(None) => Poll::Ready(None),
